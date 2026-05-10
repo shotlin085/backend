@@ -1,0 +1,43 @@
+name: ShotOps Safe Deploy
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  safe-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Test
+        run: npm test --if-present
+      - name: Build
+        run: npm run build --if-present
+      - name: Trigger ShotOps Deployment
+        if: success()
+        env:
+          SHOTOPS_DEPLOY_WEBHOOK: ${{ secrets.SHOTOPS_DEPLOY_WEBHOOK }}
+          SHOTOPS_DEPLOY_TOKEN: ${{ secrets.SHOTOPS_DEPLOY_TOKEN }}
+        run: |
+          curl --fail --request POST "$SHOTOPS_DEPLOY_WEBHOOK" \
+            --header "Authorization: Bearer $SHOTOPS_DEPLOY_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "commit": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "repository": "${{ github.repository }}",
+              "run_id": "${{ github.run_id }}",
+              "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
