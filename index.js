@@ -14,6 +14,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'UP', message: 'API is healthy' });
 });
 
+app.get('/', (req, res) => {
+  res.json({ status: 'UP', message: 'backend is working' });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
